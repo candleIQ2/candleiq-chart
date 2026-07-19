@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>CandleIQ — QX Screen Reader</title>
+  <style>
+    :root {
+      --bg: #07090d;
+      --panel: #0d1117;
+      --panel-2: #111720;
+      --text: #f5f7fa;
+      --muted: #8d98a8;
+      --border: #202834;
+      --border-strong: #303a48;
+      --green: #20c997;
+      --red: #ff5d73;
+      --blue: #599cff;
+      --amber: #f5b942;
+      --shadow: 0 18px 45px rgba(0, 0, 0, .28);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input, select { font: inherit; }
+    button, a { color: inherit; }
+    .topbar { min-height: 70px; padding: 12px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid var(--border); background: rgba(13,17,23,.96); position: sticky; top: 0; z-index: 20; }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; background: var(--text); color: var(--bg); font-weight: 950; }
+    .brand strong { display: block; font-size: 15px; }
+    .brand span { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; letter-spacing: .12em; }
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .status-pill { padding: 8px 11px; border: 1px solid var(--border); border-radius: 999px; color: var(--amber); font-size: 9px; font-weight: 850; letter-spacing: .08em; }
+    .status-pill.live { color: var(--green); border-color: rgba(32,201,151,.4); }
+    .chart-link { padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-2); color: var(--blue); font-size: 10px; font-weight: 850; text-decoration: none; }
+    main { width: min(1500px, 100%); margin: 0 auto; padding: 18px 20px 32px; display: grid; grid-template-columns: 340px minmax(0,1fr); gap: 16px; }
+    .panel { border: 1px solid var(--border); border-radius: 15px; background: var(--panel); box-shadow: var(--shadow); overflow: hidden; }
+    .panel-head { padding: 15px 16px; border-bottom: 1px solid var(--border); }
+    .panel-head strong { display: block; font-size: 13px; }
+    .panel-head span { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .controls { padding: 15px; display: grid; gap: 13px; }
+    .step { padding: 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--panel-2); }
+    .step-title { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 10px; font-weight: 900; letter-spacing: .06em; }
+    .step-title i { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 7px; background: rgba(89,156,255,.12); color: var(--blue); font-style: normal; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    label { display: grid; gap: 5px; color: var(--muted); font-size: 9px; }
+    input, select { width: 100%; min-height: 37px; padding: 8px 9px; color: var(--text); border: 1px solid var(--border); border-radius: 8px; background: var(--bg); outline: none; }
+    input:focus, select:focus { border-color: var(--blue); }
+    input[type="color"] { padding: 4px; }
+    input[type="range"] { padding: 0; min-height: 26px; }
+    .button-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { min-height: 38px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-2); cursor: pointer; font-size: 9px; font-weight: 900; letter-spacing: .05em; }
+    button:hover { border-color: var(--border-strong); }
+    .primary { flex: 1; background: var(--green); border-color: var(--green); color: #06130f; }
+    .danger { color: var(--red); }
+    .help { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
+    .help strong { color: var(--text); }
+    .viewer { min-width: 0; }
+    .viewer-body { padding: 13px; }
+    .screen-wrap { min-height: 460px; display: grid; place-items: center; position: relative; overflow: hidden; border: 1px dashed var(--border-strong); border-radius: 12px; background: #05070a; }
+    #screenCanvas { display: block; width: 100%; height: auto; max-height: 72vh; object-fit: contain; cursor: crosshair; touch-action: none; }
+    .empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 30px; text-align: center; color: var(--muted); font-size: 11px; line-height: 1.65; pointer-events: none; }
+    .empty.hidden { display: none; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 9px; margin-top: 11px; }
+    .stat { padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2); }
+    .stat span { display: block; color: var(--muted); font-size: 8px; letter-spacing: .08em; }
+    .stat strong { display: block; margin-top: 5px; font-size: 12px; }
+    .read-only { margin-top: 11px; padding: 10px 12px; border: 1px solid rgba(32,201,151,.25); border-radius: 9px; background: rgba(32,201,151,.07); color: #89e8ca; font-size: 9px; line-height: 1.5; }
+    video { display: none; }
+    @media (max-width: 960px) { main { grid-template-columns: 1fr; } .screen-wrap { min-height: 360px; } }
+    @media (max-width: 620px) { .topbar { padding: 10px 12px; } .status-pill { display: none; } main { padding: 12px; } .stats { grid-template-columns: 1fr 1fr; } .field-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="mark">QX</div><div><strong>CandleIQ Reader</strong><span>READ-ONLY SCREEN BRIDGE</span></div></div>
+    <div class="top-actions"><div class="status-pill" id="readerStatus">NOT CONNECTED</div><a class="chart-link" href="index.html" target="_blank" rel="noopener">OPEN USER CHART</a></div>
+  </header>
+
+  <main>
+    <aside class="panel">
+      <div class="panel-head"><strong>QX Screen Connection</strong><span>Share the QX browser or TeamViewer window. The reader only watches candle pixels.</span></div>
+      <div class="controls">
+        <section class="step">
+          <div class="step-title"><i>1</i> SHARE QX WINDOW</div>
+          <div class="button-row"><button class="primary" id="startCapture" type="button">START SCREEN READER</button><button class="danger" id="stopCapture" type="button" disabled>STOP</button></div>
+        </section>
+
+        <section class="step">
+          <div class="step-title"><i>2</i> SELECT CHART AREA</div>
+          <div class="button-row"><button id="autoCrop" type="button" disabled>AUTO FIND</button><button id="fullCrop" type="button" disabled>FULL WINDOW</button></div>
+          <p class="help" style="margin-top:9px">For best accuracy, drag a box directly around the QX candle chart. Do not include pair buttons or trade controls.</p>
+        </section>
+
+        <section class="step">
+          <div class="step-title"><i>3</i> MARKET SETTINGS</div>
+          <div class="field-grid">
+            <label>Currency pair<select id="symbol">
+              <option value="EURUSD">EUR/USD</option><option value="GBPUSD">GBP/USD</option><option value="USDJPY">USD/JPY</option>
+              <option value="AUDUSD">AUD/USD</option><option value="USDCAD">USD/CAD</option><option value="USDCHF">USD/CHF</option><option value="NZDUSD">NZD/USD</option>
+            </select></label>
+            <label>Candle time<select id="interval"><option value="60">1 minute</option><option value="300">5 minutes</option><option value="900">15 minutes</option><option value="3600">1 hour</option></select></label>
+            <label>Green candle<input id="greenColor" type="color" value="#00bfa6"></label>
+            <label>Red candle<input id="redColor" type="color" value="#ff3b5c"></label>
+            <label>Top chart price<input id="topPrice" inputmode="decimal" value="1.09000"></label>
+            <label>Bottom chart price<input id="bottomPrice" inputmode="decimal" value="1.07800"></label>
+          </div>
+          <label style="margin-top:10px">Color tolerance <span id="toleranceValue">70</span><input id="tolerance" type="range" min="25" max="140" value="70"></label>
+        </section>
+
+        <section class="step">
+          <div class="step-title"><i>4</i> OPTIONAL REMOTE RELAY</div>
+          <label>Secure WebSocket URL<input id="relayUrl" placeholder="wss://your-live-relay.example"></label>
+          <label style="margin-top:9px">Reader publish key<input id="relayKey" type="password" placeholder="Private reader key"></label>
+          <div class="button-row" style="margin-top:9px"><button id="relayConnect" type="button">CONNECT RELAY</button></div>
+          <p class="help" style="margin-top:9px">Without a relay, the User Chart updates in another tab on this same browser. A backend URL is required for remote users.</p>
+        </section>
+
+        <p class="help"><strong>Important:</strong> Keep the shared QX/TeamViewer window visible. This tool never places a trade and never clicks inside QX.</p>
+      </div>
+    </aside>
+
+    <section class="panel viewer">
+      <div class="panel-head"><strong>Shared Screen Preview & Calibration</strong><span>After sharing, drag over only the candle chart. A blue rectangle shows the area being read.</span></div>
+      <div class="viewer-body">
+        <div class="screen-wrap">
+          <canvas id="screenCanvas" width="1280" height="720"></canvas>
+          <div class="empty" id="emptyState">Click <strong>START SCREEN READER</strong>, then choose the QX browser tab, QX window, or TeamViewer window from Chrome's share dialog.</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span>CAPTURE</span><strong id="captureStat">OFF</strong></div>
+          <div class="stat"><span>DETECTED CANDLES</span><strong id="candleStat">0</strong></div>
+          <div class="stat"><span>LOCAL CHART</span><strong id="localStat">WAITING</strong></div>
+          <div class="stat"><span>REMOTE RELAY</span><strong id="relayStat">OFF</strong></div>
+        </div>
+        <div class="read-only">READ-ONLY MODE — candle colors and shapes only. No QX login data, trade buttons, balances, or account actions are read.</div>
+      </div>
+    </section>
+  </main>
+
+  <video id="captureVideo" autoplay muted playsinline></video>
+
+  <script>
+    const pairDefaults = {
+      EURUSD: { base: 1.08420, precision: 5 }, GBPUSD: { base: 1.27380, precision: 5 },
+      USDJPY: { base: 157.420, precision: 3 }, AUDUSD: { base: .65240, precision: 5 },
+      USDCAD: { base: 1.37180, precision: 5 }, USDCHF: { base: .89530, precision: 5 },
+      NZDUSD: { base: .58385, precision: 5 }
+    };
+    const video = document.getElementById('captureVideo');
+    const preview = document.getElementById('screenCanvas');
+    const previewCtx = preview.getContext('2d', { willReadFrequently: true });
+    const source = document.createElement('canvas');
+    const sourceCtx = source.getContext('2d', { willReadFrequently: true });
+    const status = document.getElementById('readerStatus');
+    const startButton = document.getElementById('startCapture');
+    const stopButton = document.getElementById('stopCapture');
+    const autoButton = document.getElementById('autoCrop');
+    const fullButton = document.getElementById('fullCrop');
+    const emptyState = document.getElementById('emptyState');
+    const tolerance = document.getElementById('tolerance');
+    let stream = null;
+    let crop = null;
+    let selecting = false;
+    let selectStart = null;
+    let processTimer = null;
+    let channel = null;
+    let relaySocket = null;
+    let lastDetected = [];
+
+    if ('BroadcastChannel' in window) channel = new BroadcastChannel('candleiq-qx-feed');
+
+    function setStatus(text, live) {
+      status.textContent = text;
+      status.classList.toggle('live', Boolean(live));
+    }
+
+    function hexRgb(hex) {
+      const value = String(hex).replace('#', '');
+      return { r: parseInt(value.slice(0, 2), 16), g: parseInt(value.slice(2, 4), 16), b: parseInt(value.slice(4, 6), 16) };
+    }
+
+    function colorMatch(r, g, b, target, limit) {
+      const dr = r - target.r;
+      const dg = g - target.g;
+      const db = b - target.b;
+      return dr * dr + dg * dg + db * db <= limit * limit;
+    }
+
+    function clampCrop(value) {
+      if (!source.width || !source.height) return null;
+      const x = Math.max(0, Math.min(source.width - 2, Math.round(value.x)));
+      const y = Math.max(0, Math.min(source.height - 2, Math.round(value.y)));
+      return {
+        x: x,
+        y: y,
+        w: Math.max(2, Math.min(source.width - x, Math.round(value.w))),
+        h: Math.max(2, Math.min(source.height - y, Math.round(value.h)))
+      };
+    }
+
+    function fullWindowCrop() {
+      crop = { x: 0, y: Math.round(source.height * .08), w: source.width, h: Math.round(source.height * .86) };
+    }
+
+    function renderPreview() {
+      if (!stream || video.readyState < 2) return;
+      sourceCtx.drawImage(video, 0, 0, source.width, source.height);
+      previewCtx.drawImage(source, 0, 0, preview.width, preview.height);
+      if (crop) {
+        previewCtx.save();
+        previewCtx.fillStyle = 'rgba(89,156,255,.08)';
+        previewCtx.strokeStyle = '#599cff';
+        previewCtx.lineWidth = Math.max(2, source.width / 800);
+        previewCtx.setLineDash([10, 7]);
+        previewCtx.fillRect(crop.x, crop.y, crop.w, crop.h);
+        previewCtx.strokeRect(crop.x, crop.y, crop.w, crop.h);
+        previewCtx.restore();
+      }
+      requestAnimationFrame(renderPreview);
+    }
+
+    async function startCapture() {
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 5, max: 10 } }, audio: false });
+        video.srcObject = stream;
+        await video.play();
+        await new Promise(resolve => {
+          if (video.videoWidth) return resolve();
+          video.addEventListener('loadedmetadata', resolve, { once: true });
+        });
+        source.width = preview.width = video.videoWidth;
+        source.height = preview.height = video.videoHeight;
+        fullWindowCrop();
+        emptyState.classList.add('hidden');
+        startButton.disabled = true;
+        stopButton.disabled = false;
+        autoButton.disabled = false;
+        fullButton.disabled = false;
+        document.getElementById('captureStat').textContent = 'ON';
+        setStatus('SCREEN SHARED · CALIBRATING', true);
+        stream.getVideoTracks()[0].addEventListener('ended', stopCapture);
+        renderPreview();
+        clearInterval(processTimer);
+        processTimer = setInterval(processFrame, 1000);
+      } catch (error) {
+        setStatus('SCREEN SHARE CANCELLED', false);
+      }
+    }
+
+    function stopCapture() {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      stream = null;
+      video.srcObject = null;
+      clearInterval(processTimer);
+      processTimer = null;
+      startButton.disabled = false;
+      stopButton.disabled = true;
+      autoButton.disabled = true;
+      fullButton.disabled = true;
+      emptyState.classList.remove('hidden');
+      document.getElementById('captureStat').textContent = 'OFF';
+      document.getElementById('localStat').textContent = 'WAITING';
+      setStatus('NOT CONNECTED', false);
+    }
+
+    function autoFindCrop() {
+      if (!stream) return;
+      sourceCtx.drawImage(video, 0, 0, source.width, source.height);
+      const image = sourceCtx.getImageData(0, 0, source.width, source.height);
+      const green = hexRgb(document.getElementById('greenColor').value);
+      const red = hexRgb(document.getElementById('redColor').value);
+      const limit = Number(tolerance.value);
+      let minX = source.width, minY = source.height, maxX = 0, maxY = 0, hits = 0;
+      const startY = Math.floor(source.height * .12);
+      for (let y = startY; y < source.height; y += 2) {
+        for (let x = 0; x < source.width; x += 2) {
+          const index = (y * source.width + x) * 4;
+          const r = image.data[index], g = image.data[index + 1], b = image.data[index + 2];
+          if (colorMatch(r, g, b, green, limit) || colorMatch(r, g, b, red, limit)) {
+            minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+            minY = Math.min(minY, y); maxY = Math.max(maxY, y); hits += 1;
+          }
+        }
+      }
+      if (hits > 100 && maxX - minX > source.width * .2 && maxY - minY > 80) {
+        crop = clampCrop({ x: minX - 25, y: minY - 35, w: maxX - minX + 50, h: maxY - minY + 70 });
+        setStatus('CHART AREA FOUND · READING', true);
+      } else {
+        fullWindowCrop();
+        setStatus('DRAW A BOX AROUND CANDLES', true);
+      }
+    }
+
+    function pointerPoint(event) {
+      const rect = preview.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left) * preview.width / rect.width,
+        y: (event.clientY - rect.top) * preview.height / rect.height
+      };
+    }
+
+    preview.addEventListener('pointerdown', event => {
+      if (!stream) return;
+      selecting = true;
+      selectStart = pointerPoint(event);
+      preview.setPointerCapture(event.pointerId);
+    });
+    preview.addEventListener('pointermove', event => {
+      if (!selecting || !selectStart) return;
+      const point = pointerPoint(event);
+      crop = clampCrop({
+        x: Math.min(point.x, selectStart.x), y: Math.min(point.y, selectStart.y),
+        w: Math.abs(point.x - selectStart.x), h: Math.abs(point.y - selectStart.y)
+      });
+    });
+    preview.addEventListener('pointerup', event => {
+      if (!selecting) return;
+      selecting = false;
+      preview.releasePointerCapture(event.pointerId);
+      if (crop && crop.w > 120 && crop.h > 100) setStatus('CHART AREA SET · READING', true);
+    });
+
+    function priceRange() {
+      const symbol = document.getElementById('symbol').value;
+      const item = pairDefaults[symbol];
+      let top = Number(document.getElementById('topPrice').value);
+      let bottom = Number(document.getElementById('bottomPrice').value);
+      if (!Number.isFinite(top) || !Number.isFinite(bottom) || top <= bottom) {
+        top = item.base * 1.006;
+        bottom = item.base * .994;
+      }
+      return { top: top, bottom: bottom };
+    }
+
+    function extractCandles() {
+      if (!crop || crop.w < 120 || crop.h < 100) return [];
+      const box = clampCrop(crop);
+      const image = sourceCtx.getImageData(box.x, box.y, box.w, box.h);
+      const green = hexRgb(document.getElementById('greenColor').value);
+      const red = hexRgb(document.getElementById('redColor').value);
+      const limit = Number(tolerance.value);
+      const columns = Array.from({ length: box.w }, () => []);
+      for (let y = 0; y < box.h; y += 1) {
+        for (let x = 0; x < box.w; x += 1) {
+          const index = (y * box.w + x) * 4;
+          const r = image.data[index], g = image.data[index + 1], b = image.data[index + 2];
+          if (colorMatch(r, g, b, green, limit)) columns[x].push({ y: y, color: 1 });
+          else if (colorMatch(r, g, b, red, limit)) columns[x].push({ y: y, color: -1 });
+        }
+      }
+
+      const groups = [];
+      let current = null;
+      let gap = 0;
+      for (let x = 0; x < columns.length; x += 1) {
+        const active = columns[x].length >= 2;
+        if (active) {
+          if (!current) current = { start: x, end: x };
+          current.end = x;
+          gap = 0;
+        } else if (current) {
+          gap += 1;
+          if (gap > 2) {
+            groups.push(current);
+            current = null;
+            gap = 0;
+          }
+        }
+      }
+      if (current) groups.push(current);
+
+      const range = priceRange();
+      const priceAt = y => range.top - (y / box.h) * (range.top - range.bottom);
+      const raw = [];
+      groups.forEach(group => {
+        const width = group.end - group.start + 1;
+        if (width < 2 || width > 36) return;
+        const hits = [];
+        for (let x = group.start; x <= group.end; x += 1) columns[x].forEach(hit => hits.push(hit));
+        if (hits.length < 8) return;
+        const greenHits = hits.filter(hit => hit.color === 1).length;
+        const direction = greenHits >= hits.length / 2 ? 1 : -1;
+        const selected = hits.filter(hit => hit.color === direction);
+        if (selected.length < 6) return;
+        const rowCounts = new Map();
+        selected.forEach(hit => rowCounts.set(hit.y, (rowCounts.get(hit.y) || 0) + 1));
+        const threshold = Math.max(2, Math.round(width * .42));
+        const bodyRows = Array.from(rowCounts.entries()).filter(entry => entry[1] >= threshold).map(entry => entry[0]);
+        if (bodyRows.length < 2) return;
+        const wickTop = Math.min.apply(null, selected.map(hit => hit.y));
+        const wickBottom = Math.max.apply(null, selected.map(hit => hit.y));
+        const bodyTop = Math.min.apply(null, bodyRows);
+        const bodyBottom = Math.max.apply(null, bodyRows);
+        const high = priceAt(wickTop);
+        const low = priceAt(wickBottom);
+        const topBodyPrice = priceAt(bodyTop);
+        const bottomBodyPrice = priceAt(bodyBottom);
+        raw.push({
+          x: (group.start + group.end) / 2,
+          open: direction === 1 ? bottomBodyPrice : topBodyPrice,
+          close: direction === 1 ? topBodyPrice : bottomBodyPrice,
+          high: Math.max(high, topBodyPrice),
+          low: Math.min(low, bottomBodyPrice)
+        });
+      });
+
+      raw.sort((a, b) => a.x - b.x);
+      const rows = raw.slice(-90);
+      const interval = Number(document.getElementById('interval').value);
+      const intervalMs = interval * 1000;
+      const bucket = Math.floor(Date.now() / intervalMs) * intervalMs;
+      return rows.map((item, index) => ({
+        time: bucket - (rows.length - 1 - index) * intervalMs,
+        open: item.open, high: item.high, low: item.low, close: item.close
+      }));
+    }
+
+    function emitPacket(candles) {
+      const packet = {
+        type: 'candleiq-candles',
+        symbol: document.getElementById('symbol').value,
+        interval: Number(document.getElementById('interval').value),
+        candles: candles,
+        detectedAt: Date.now(),
+        detector: 'screen-color-v1'
+      };
+      if (channel) channel.postMessage(packet);
+      try { localStorage.setItem('ci-qx-last-packet', JSON.stringify(packet)); } catch (error) { /* Browser storage may be disabled. */ }
+      if (relaySocket && relaySocket.readyState === WebSocket.OPEN) relaySocket.send(JSON.stringify(packet));
+      document.getElementById('localStat').textContent = 'LIVE';
+    }
+
+    function processFrame() {
+      if (!stream || video.readyState < 2) return;
+      sourceCtx.drawImage(video, 0, 0, source.width, source.height);
+      lastDetected = extractCandles();
+      document.getElementById('candleStat').textContent = String(lastDetected.length);
+      if (lastDetected.length >= 8) {
+        emitPacket(lastDetected);
+        setStatus('QX CANDLES · LIVE', true);
+      } else {
+        document.getElementById('localStat').textContent = 'CALIBRATE';
+        setStatus('SELECT CANDLE AREA / COLORS', true);
+      }
+    }
+
+    function updateDefaultPrices() {
+      const item = pairDefaults[document.getElementById('symbol').value];
+      document.getElementById('topPrice').value = (item.base * 1.006).toFixed(item.precision);
+      document.getElementById('bottomPrice').value = (item.base * .994).toFixed(item.precision);
+    }
+
+    function connectRelay() {
+      const url = document.getElementById('relayUrl').value.trim();
+      if (!url.startsWith('wss://')) {
+        document.getElementById('relayStat').textContent = 'NEED WSS URL';
+        return;
+      }
+      if (relaySocket) relaySocket.close();
+      try {
+        const key = document.getElementById('relayKey').value.trim();
+        const separator = url.includes('?') ? '&' : '?';
+        relaySocket = new WebSocket(url + separator + 'role=reader&key=' + encodeURIComponent(key));
+        document.getElementById('relayStat').textContent = 'CONNECTING';
+        relaySocket.addEventListener('open', () => document.getElementById('relayStat').textContent = 'LIVE');
+        relaySocket.addEventListener('close', () => document.getElementById('relayStat').textContent = 'OFF');
+        relaySocket.addEventListener('error', () => document.getElementById('relayStat').textContent = 'ERROR');
+      } catch (error) {
+        document.getElementById('relayStat').textContent = 'ERROR';
+      }
+    }
+
+    startButton.addEventListener('click', startCapture);
+    stopButton.addEventListener('click', stopCapture);
+    autoButton.addEventListener('click', autoFindCrop);
+    fullButton.addEventListener('click', fullWindowCrop);
+    document.getElementById('symbol').addEventListener('change', updateDefaultPrices);
+    tolerance.addEventListener('input', () => document.getElementById('toleranceValue').textContent = tolerance.value);
+    document.getElementById('relayConnect').addEventListener('click', connectRelay);
+    fetch('relay-config.json', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(config => { if (config && config.websocketUrl) document.getElementById('relayUrl').value = config.websocketUrl; })
+      .catch(() => { /* Remote relay is optional. */ });
+    updateDefaultPrices();
+  </script>
+</body>
+</html>
