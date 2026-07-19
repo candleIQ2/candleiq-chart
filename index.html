@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>CandleIQ — Chart Screen V3</title>
+  <style>
+    :root {
+      --bg: #07090d;
+      --panel: #0d1117;
+      --panel-2: #111720;
+      --text: #f5f7fa;
+      --muted: #8d98a8;
+      --border: #202834;
+      --border-strong: #303a48;
+      --green: #20c997;
+      --green-soft: rgba(32, 201, 151, .12);
+      --red: #ff5d73;
+      --red-soft: rgba(255, 93, 115, .12);
+      --blue: #599cff;
+      --blue-soft: rgba(89, 156, 255, .12);
+      --amber: #f5b942;
+      --amber-soft: rgba(245, 185, 66, .12);
+      --shadow: 0 18px 45px rgba(0, 0, 0, .25);
+      --radius: 16px;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f3f5f7;
+      --panel: #ffffff;
+      --panel-2: #f7f9fb;
+      --text: #111827;
+      --muted: #657184;
+      --border: #e1e6ec;
+      --border-strong: #cbd3dd;
+      --green-soft: rgba(22, 163, 116, .1);
+      --red-soft: rgba(225, 58, 78, .09);
+      --blue-soft: rgba(37, 99, 235, .09);
+      --amber-soft: rgba(217, 145, 21, .1);
+      --shadow: 0 18px 40px rgba(35, 45, 60, .09);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      transition: background .2s ease, color .2s ease;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+
+    .topbar {
+      height: 72px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+    }
+
+    .brand, .header-actions, .brand-mark, .data-pill, .profile, .pair-name,
+    .control-row, .market-card-top, .market-meta, .timer-box,
+    .legend, .legend-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand { gap: 12px; min-width: 190px; }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--border-strong);
+      border-radius: 11px;
+      justify-content: center;
+      background: var(--text);
+      color: var(--bg);
+      font-weight: 900;
+      font-size: 17px;
+      letter-spacing: -.06em;
+    }
+    .brand-copy strong { display: block; letter-spacing: -.025em; font-size: 16px; }
+    .brand-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; letter-spacing: .14em; }
+
+    .data-pill {
+      gap: 7px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .08em;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .data-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 5px var(--amber-soft); }
+    .data-pill.connected .data-dot { background: var(--green); box-shadow: 0 0 0 5px var(--green-soft); }
+    .header-actions { gap: 9px; }
+
+    .icon-button, .chip-button, .primary-button, .time-button, .market-card,
+    .tab-button, .overlay-button {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
+    .icon-button:hover, .chip-button:hover, .time-button:hover, .market-card:hover,
+    .tab-button:hover, .overlay-button:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+    .icon-button { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; }
+    .chip-button { height: 38px; border-radius: 10px; padding: 0 13px; font-size: 10px; font-weight: 850; letter-spacing: .06em; }
+    .plan-preview { color: var(--amber); }
+    .profile { gap: 9px; padding-left: 10px; border-left: 1px solid var(--border); }
+    .avatar { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); font-weight: 850; font-size: 12px; }
+    .profile strong { display: block; font-size: 12px; }
+    .profile span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+
+    .page { width: min(1640px, 100%); margin: 0 auto; padding: 20px 24px 34px; }
+    .market-strip { display: grid; grid-template-columns: repeat(7, minmax(148px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 3px; scrollbar-width: thin; }
+    .market-card { color: var(--text); min-width: 148px; padding: 13px 14px; border-radius: 13px; text-align: left; }
+    .market-card.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .market-card-top, .market-meta { justify-content: space-between; gap: 8px; }
+    .market-card strong { font-size: 12px; }
+    .market-card small { color: var(--muted); font-size: 8px; letter-spacing: .1em; }
+    .market-meta { margin-top: 9px; color: var(--muted); font-size: 9px; }
+    .market-card.active small, .market-card.active .market-meta { color: color-mix(in srgb, var(--bg) 68%, transparent); }
+
+    .workspace { margin-top: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: stretch; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .chart-panel { overflow: hidden; min-width: 0; }
+    .chart-toolbar { min-height: 64px; padding: 11px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .pair-name { gap: 10px; }
+    .pair-badge { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--border); background: var(--panel-2); font-size: 9px; font-weight: 900; color: var(--blue); }
+    .pair-name strong { display: block; font-size: 14px; }
+    .pair-name span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .control-row { gap: 7px; flex-wrap: wrap; }
+    .time-button, .tab-button, .overlay-button { padding: 7px 10px; border-radius: 8px; color: var(--muted); font-size: 9px; font-weight: 850; }
+    .time-button.active, .tab-button.active, .overlay-button.active { color: var(--text); background: var(--blue-soft); border-color: color-mix(in srgb, var(--blue) 45%, var(--border)); }
+    .overlay-button.locked { opacity: .45; }
+
+    .chart-stage { height: 690px; position: relative; overflow: hidden; background: var(--panel); }
+    #marketCanvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+    .timer-box {
+      position: absolute;
+      top: 13px;
+      right: 16px;
+      z-index: 5;
+      gap: 10px;
+      padding: 8px 11px;
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      box-shadow: var(--shadow);
+      pointer-events: none;
+    }
+    .timer-box span { color: var(--muted); font-size: 8px; letter-spacing: .11em; font-weight: 850; }
+    .timer-box strong { min-width: 43px; font-variant-numeric: tabular-nums; font-size: 16px; letter-spacing: -.02em; }
+    .chart-source { position: absolute; left: 14px; bottom: 11px; z-index: 4; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--border); background: color-mix(in srgb, var(--panel) 92%, transparent); color: var(--muted); font-size: 8px; letter-spacing: .09em; pointer-events: none; }
+    .legend { position: absolute; left: 15px; top: 13px; z-index: 4; gap: 11px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--panel) 90%, transparent); pointer-events: none; }
+    .legend-item { gap: 5px; color: var(--muted); font-size: 8px; }
+    .legend-swatch { width: 14px; height: 4px; border-radius: 5px; }
+    .legend-swatch.support { background: var(--green); }
+    .legend-swatch.resistance { background: var(--red); }
+
+    .toast { position: fixed; right: 20px; bottom: 20px; z-index: 100; max-width: min(360px, calc(100vw - 40px)); padding: 13px 15px; border: 1px solid var(--border-strong); border-radius: 11px; background: var(--panel); box-shadow: var(--shadow); font-size: 10px; transform: translateY(20px); opacity: 0; pointer-events: none; transition: .2s ease; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 1080px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      .topbar { height: 64px; padding: 0 13px; }
+      .brand { min-width: auto; }
+      .brand-copy span, .profile div, .data-pill, .header-actions .chip-button:first-of-type { display: none; }
+      .profile { padding-left: 4px; border-left: 0; }
+      .page { padding: 13px 12px 24px; }
+      .market-strip { grid-template-columns: repeat(7, 142px); }
+      .chart-stage { height: 530px; }
+      .chart-toolbar { align-items: flex-start; }
+      .legend { display: none; }
+    }
+    @media (max-width: 440px) {
+      .brand-copy strong { font-size: 14px; }
+      .brand-mark, .icon-button { width: 34px; height: 34px; }
+      .header-actions { gap: 5px; }
+      .chip-button { height: 34px; padding: 0 9px; }
+      .chart-stage { height: 490px; }
+      .timer-box { right: 8px; top: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">CI</div>
+      <div class="brand-copy"><strong>CandleIQ</strong><span>MARKET ANALYSIS</span></div>
+    </div>
+
+    <div class="data-pill" id="dataPill"><span class="data-dot"></span><span id="dataStatus">CHART SCREEN V3 · PREVIEW</span></div>
+
+    <div class="header-actions">
+      <button class="chip-button plan-preview" id="planToggle" type="button">VIEW: PREMIUM</button>
+      <button class="icon-button" id="themeToggle" type="button" aria-label="Toggle black and white theme">☼</button>
+      <div class="profile"><div class="avatar">AK</div><div><strong>Ali Khan</strong><span id="clock">--:--:--</span></div></div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="market-strip" aria-label="Currency pairs">
+      <button class="market-card active" data-symbol="EURUSD" type="button"><span class="market-card-top"><strong>EUR/USD</strong><small>NORMAL</small></span><span class="market-meta"><span>Euro / Dollar</span><span>ACTIVE</span></span></button>
+      <button class="market-card" data-symbol="GBPUSD" type="button"><span class="market-card-top"><strong>GBP/USD</strong><small>NORMAL</small></span><span class="market-meta"><span>Pound / Dollar</span><span>ACTIVE</span></span></button>
+      <button class="market-card" data-symbol="USDJPY" type="button"><span class="market-card-top"><strong>USD/JPY</strong><small>NORMAL</small></span><span class="market-meta"><span>Dollar / Yen</span><span>ACTIVE</span></span></button>
+      <button class="market-card" data-symbol="AUDUSD" type="button"><span class="market-card-top"><strong>AUD/USD</strong><small>NORMAL</small></span><span class="market-meta"><span>Aussie / Dollar</span><span>ACTIVE</span></span></button>
+      <button class="market-card" data-symbol="USDCAD" type="button"><span class="market-card-top"><strong>USD/CAD</strong><small>NORMAL</small></span><span class="market-meta"><span>Dollar / CAD</span><span>ACTIVE</span></span></button>
+      <button class="market-card" data-symbol="USDCHF" type="button"><span class="market-card-top"><strong>USD/CHF</strong><small>NORMAL</small></span><span class="market-meta"><span>Dollar / Franc</span><span>ACTIVE</span></span></button>
+      <button class="market-card" data-symbol="NZDUSD" type="button"><span class="market-card-top"><strong>NZD/USD</strong><small>NORMAL</small></span><span class="market-meta"><span>Kiwi / Dollar</span><span>ACTIVE</span></span></button>
+    </section>
+
+    <section class="workspace">
+      <article class="panel chart-panel">
+        <div class="chart-toolbar">
+          <div class="pair-name"><div class="pair-badge">QX</div><div><strong id="activePair">EUR/USD</strong><span>Custom candle screen</span></div></div>
+          <div class="control-row" role="group" aria-label="Chart controls">
+            <button class="overlay-button active" id="figuresToggle" type="button">G/R FIGURES</button>
+            <button class="overlay-button active" id="levelsToggle" type="button">S/R ZONES</button>
+            <button class="overlay-button active" id="emaToggle" type="button">EMA 20/50</button>
+            <button class="overlay-button active" id="bandsToggle" type="button">BOLLINGER</button>
+            <button class="time-button active" data-interval="60" type="button">1M</button>
+            <button class="time-button" data-interval="300" type="button">5M</button>
+            <button class="time-button" data-interval="900" type="button">15M</button>
+            <button class="time-button" data-interval="3600" type="button">1H</button>
+          </div>
+        </div>
+
+        <div class="chart-stage" id="chartStage">
+          <canvas id="marketCanvas" aria-label="Custom live candle chart"></canvas>
+          <div class="legend"><span class="legend-item"><i class="legend-swatch support"></i>SUPPORT ZONE</span><span class="legend-item"><i class="legend-swatch resistance"></i>RESISTANCE ZONE</span></div>
+          <div class="timer-box"><span>NEXT CANDLE</span><strong id="candleTimer">00:00</strong></div>
+          <div class="chart-source" id="chartSource">OWN CHART SCREEN V3 · PREVIEW DATA</div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    const pairs = {
+      EURUSD: { label: 'EUR/USD', base: 1.08420, precision: 5 },
+      GBPUSD: { label: 'GBP/USD', base: 1.27380, precision: 5 },
+      USDJPY: { label: 'USD/JPY', base: 157.420, precision: 3 },
+      AUDUSD: { label: 'AUD/USD', base: 0.65240, precision: 5 },
+      USDCAD: { label: 'USD/CAD', base: 1.37180, precision: 5 },
+      USDCHF: { label: 'USD/CHF', base: 0.89530, precision: 5 },
+      NZDUSD: { label: 'NZD/USD', base: 0.58385, precision: 5 }
+    };
+
+    const state = {
+      symbol: 'EURUSD',
+      interval: 60,
+      theme: localStorage.getItem('ci-theme') || 'dark',
+      premium: true,
+      showFigures: true,
+      showLevels: true,
+      showEma: true,
+      showBands: true,
+      feedMode: 'preview',
+      candles: [],
+      levels: null,
+      tickSeed: 0
+    };
+
+    const root = document.documentElement;
+    const canvas = document.getElementById('marketCanvas');
+    const ctx = canvas.getContext('2d');
+    const chartStage = document.getElementById('chartStage');
+    const planToggle = document.getElementById('planToggle');
+    const toast = document.getElementById('toast');
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function hashString(value) {
+      let hash = 2166136261;
+      for (let i = 0; i < value.length; i += 1) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return hash >>> 0;
+    }
+
+    function seededRandom(seed) {
+      let value = seed >>> 0;
+      return () => {
+        value += 0x6D2B79F5;
+        let t = value;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function buildPreviewCandles() {
+      const pair = pairs[state.symbol];
+      const bucket = Math.floor(Date.now() / (state.interval * 1000)) * state.interval * 1000;
+      const dayKey = Math.floor(Date.now() / 86400000);
+      const random = seededRandom(hashString(state.symbol) + state.interval + dayKey);
+      const scale = Math.sqrt(state.interval / 60);
+      const volatility = pair.base * 0.00034 * scale;
+      let price = pair.base * (1 + (random() - .5) * .004);
+      const candles = [];
+
+      for (let index = 79; index >= 0; index -= 1) {
+        const open = price;
+        const directionalMove = (random() - .49) * volatility * 1.7;
+        const close = Math.max(.00001, open + directionalMove);
+        const wick = volatility * (.18 + random() * .55);
+        const high = Math.max(open, close) + wick * random();
+        const low = Math.min(open, close) - wick * random();
+        candles.push({ time: bucket - index * state.interval * 1000, open, high, low, close });
+        price = close;
+      }
+      state.candles = candles;
+      state.tickSeed = hashString(state.symbol + bucket);
+      refreshAnalysis();
+    }
+
+    function trueRange(rows, index) {
+      const candle = rows[index];
+      if (index === 0) return candle.high - candle.low;
+      const previous = rows[index - 1].close;
+      return Math.max(candle.high - candle.low, Math.abs(candle.high - previous), Math.abs(candle.low - previous));
+    }
+
+    function atr(rows, index, period = 14) {
+      const start = Math.max(0, index - period + 1);
+      let total = 0;
+      for (let i = start; i <= index; i += 1) total += trueRange(rows, i);
+      return total / Math.max(1, index - start + 1);
+    }
+
+    function strengthScore(rows, index) {
+      const candle = rows[index];
+      const averageRange = Math.max(atr(rows, index), Number.EPSILON);
+      const bodyRatio = Math.abs(candle.close - candle.open) / averageRange;
+      if (bodyRatio < .05) return 0;
+      const thresholds = [.16, .27, .40, .56, .75, .98, 1.25, 1.60];
+      return Math.min(9, 1 + thresholds.filter(value => bodyRatio > value).length);
+    }
+
+    function calculateLevels(rows) {
+      const current = rows.at(-1).close;
+      const averageRange = atr(rows, rows.length - 1);
+      const candidates = [];
+      for (let i = Math.max(2, rows.length - 65); i < rows.length - 2; i += 1) {
+        const isHigh = rows[i].high > rows[i - 1].high && rows[i].high > rows[i - 2].high && rows[i].high >= rows[i + 1].high && rows[i].high >= rows[i + 2].high;
+        const isLow = rows[i].low < rows[i - 1].low && rows[i].low < rows[i - 2].low && rows[i].low <= rows[i + 1].low && rows[i].low <= rows[i + 2].low;
+        if (isHigh) candidates.push({ type: 'resistance', price: rows[i].high, index: i });
+        if (isLow) candidates.push({ type: 'support', price: rows[i].low, index: i });
+      }
+
+      const supports = candidates.filter(item => item.type === 'support' && item.price < current).sort((a, b) => b.price - a.price);
+      const resistances = candidates.filter(item => item.type === 'resistance' && item.price > current).sort((a, b) => a.price - b.price);
+      const recent = rows.slice(-35);
+      const fallbackSupport = Math.min(...recent.map(item => item.low));
+      const fallbackResistance = Math.max(...recent.map(item => item.high));
+      return {
+        support: supports[0]?.price ?? Math.min(fallbackSupport, current - averageRange * .8),
+        resistance: resistances[0]?.price ?? Math.max(fallbackResistance, current + averageRange * .8),
+        zoneWidth: Math.max(averageRange * .16, current * .000025)
+      };
+    }
+
+    function emaSeries(rows, period) {
+      const multiplier = 2 / (period + 1);
+      let value = rows[0].close;
+      return rows.map((candle, index) => {
+        value = index === 0 ? candle.close : candle.close * multiplier + value * (1 - multiplier);
+        return value;
+      });
+    }
+
+    function bollingerSeries(rows, period = 20, deviation = 2) {
+      return rows.map((candle, index) => {
+        const start = Math.max(0, index - period + 1);
+        const values = rows.slice(start, index + 1).map(item => item.close);
+        const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+        const variance = values.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / values.length;
+        const width = Math.sqrt(variance) * deviation;
+        return { upper: mean + width, middle: mean, lower: mean - width };
+      });
+    }
+
+    function formatPrice(value) {
+      return Number(value).toFixed(pairs[state.symbol].precision);
+    }
+
+    function refreshAnalysis() {
+      if (!state.candles.length) return;
+      state.levels = calculateLevels(state.candles);
+      drawChart();
+    }
+
+    function drawChart() {
+      if (!state.candles.length) return;
+      const rect = chartStage.getBoundingClientRect();
+      const ratio = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.round(rect.width * ratio);
+      canvas.height = Math.round(rect.height * ratio);
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+      const styles = getComputedStyle(root);
+      const colors = {
+        panel: styles.getPropertyValue('--panel').trim(),
+        grid: styles.getPropertyValue('--border').trim(),
+        text: styles.getPropertyValue('--text').trim(),
+        muted: styles.getPropertyValue('--muted').trim(),
+        green: styles.getPropertyValue('--green').trim(),
+        red: styles.getPropertyValue('--red').trim(),
+        blue: styles.getPropertyValue('--blue').trim(),
+        amber: styles.getPropertyValue('--amber').trim()
+      };
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.fillStyle = colors.panel;
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+      const margin = { top: 54, right: 75, bottom: 32, left: 14 };
+      const chartWidth = rect.width - margin.left - margin.right;
+      const chartHeight = rect.height - margin.top - margin.bottom;
+      const count = Math.max(32, Math.min(80, Math.floor(chartWidth / 14)));
+      const rows = state.candles.slice(-count);
+      const levels = state.levels || calculateLevels(state.candles);
+      let minimum = Math.min(...rows.map(item => item.low));
+      let maximum = Math.max(...rows.map(item => item.high));
+      if (state.premium && state.showLevels) {
+        minimum = Math.min(minimum, levels.support - levels.zoneWidth);
+        maximum = Math.max(maximum, levels.resistance + levels.zoneWidth);
+      }
+      const padding = Math.max((maximum - minimum) * .12, rows.at(-1).close * .00005);
+      minimum -= padding;
+      maximum += padding;
+      const range = Math.max(maximum - minimum, Number.EPSILON);
+      const y = price => margin.top + ((maximum - price) / range) * chartHeight;
+
+      ctx.lineWidth = 1;
+      ctx.font = '9px ui-sans-serif, system-ui';
+      for (let index = 0; index <= 6; index += 1) {
+        const gridY = margin.top + (chartHeight / 6) * index;
+        const price = maximum - (range / 6) * index;
+        ctx.strokeStyle = colors.grid;
+        ctx.globalAlpha = .55;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, gridY);
+        ctx.lineTo(margin.left + chartWidth, gridY);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = colors.muted;
+        ctx.fillText(formatPrice(price), margin.left + chartWidth + 8, gridY + 3);
+      }
+      for (let index = 0; index <= 6; index += 1) {
+        const gridX = margin.left + (chartWidth / 6) * index;
+        ctx.strokeStyle = colors.grid;
+        ctx.globalAlpha = .35;
+        ctx.beginPath();
+        ctx.moveTo(gridX, margin.top);
+        ctx.lineTo(gridX, margin.top + chartHeight);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      if (state.premium && state.showLevels) {
+        const zoneHeight = Math.max(7, Math.abs(y(levels.support + levels.zoneWidth) - y(levels.support - levels.zoneWidth)));
+        const supportTop = y(levels.support + levels.zoneWidth);
+        ctx.fillStyle = colors.green;
+        ctx.globalAlpha = .10;
+        ctx.fillRect(margin.left, supportTop, chartWidth, zoneHeight);
+        ctx.globalAlpha = .75;
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = colors.green;
+        ctx.beginPath(); ctx.moveTo(margin.left, y(levels.support)); ctx.lineTo(margin.left + chartWidth, y(levels.support)); ctx.stroke();
+
+        const resistanceTop = y(levels.resistance + levels.zoneWidth);
+        ctx.fillStyle = colors.red;
+        ctx.globalAlpha = .10;
+        ctx.fillRect(margin.left, resistanceTop, chartWidth, zoneHeight);
+        ctx.globalAlpha = .75;
+        ctx.strokeStyle = colors.red;
+        ctx.beginPath(); ctx.moveTo(margin.left, y(levels.resistance)); ctx.lineTo(margin.left + chartWidth, y(levels.resistance)); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+      }
+
+      const step = chartWidth / rows.length;
+      const bodyWidth = Math.max(3, Math.min(11, step * .62));
+      const globalOffset = state.candles.length - rows.length;
+
+      function drawIndicatorLine(values, color, alpha = .9, dash = []) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = 1.35;
+        ctx.setLineDash(dash);
+        ctx.beginPath();
+        values.forEach((value, index) => {
+          const pointX = margin.left + step * index + step / 2;
+          const pointY = y(value);
+          if (index === 0) ctx.moveTo(pointX, pointY);
+          else ctx.lineTo(pointX, pointY);
+        });
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (state.premium && state.showBands) {
+        const bands = bollingerSeries(state.candles).slice(-rows.length);
+        drawIndicatorLine(bands.map(item => item.upper), colors.muted, .48, [3, 4]);
+        drawIndicatorLine(bands.map(item => item.lower), colors.muted, .48, [3, 4]);
+      }
+
+      if (state.premium && state.showEma) {
+        drawIndicatorLine(emaSeries(state.candles, 20).slice(-rows.length), colors.blue, .92);
+        drawIndicatorLine(emaSeries(state.candles, 50).slice(-rows.length), colors.amber, .9);
+      }
+
+      rows.forEach((candle, index) => {
+        const candleX = margin.left + step * index + step / 2;
+        const rising = candle.close >= candle.open;
+        const color = rising ? colors.green : colors.red;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(candleX, y(candle.high));
+        ctx.lineTo(candleX, y(candle.low));
+        ctx.stroke();
+        const bodyTop = y(Math.max(candle.open, candle.close));
+        const bodyBottom = y(Math.min(candle.open, candle.close));
+        ctx.fillRect(candleX - bodyWidth / 2, bodyTop, bodyWidth, Math.max(2, bodyBottom - bodyTop));
+
+        const globalIndex = globalOffset + index;
+        const isClosed = globalIndex < state.candles.length - 1;
+        if (state.premium && state.showFigures && isClosed && step >= 8) {
+          const score = strengthScore(state.candles, globalIndex);
+          const label = score === 0 ? 'D0' : `${rising ? 'G' : 'R'}${score}`;
+          ctx.font = `700 ${step < 11 ? 7 : 8}px ui-sans-serif, system-ui`;
+          ctx.textAlign = 'center';
+          ctx.fillStyle = color;
+          const labelY = rising ? y(candle.high) - 5 : y(candle.low) + 11;
+          ctx.fillText(label, candleX, labelY);
+        }
+      });
+      ctx.textAlign = 'left';
+
+      const current = rows.at(-1).close;
+      const currentY = y(current);
+      ctx.strokeStyle = rows.at(-1).close >= rows.at(-1).open ? colors.green : colors.red;
+      ctx.globalAlpha = .65;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(margin.left, currentY); ctx.lineTo(margin.left + chartWidth, currentY); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fillRect(margin.left + chartWidth + 3, currentY - 9, 68, 18);
+      ctx.fillStyle = state.theme === 'dark' ? '#07100d' : '#ffffff';
+      ctx.font = '800 9px ui-sans-serif, system-ui';
+      ctx.fillText(formatPrice(current), margin.left + chartWidth + 8, currentY + 3);
+
+      ctx.fillStyle = colors.muted;
+      ctx.font = '8px ui-sans-serif, system-ui';
+      ctx.textAlign = 'center';
+      for (let index = 0; index < rows.length; index += Math.max(1, Math.floor(rows.length / 6))) {
+        const time = new Date(rows[index].time);
+        const label = `${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`;
+        ctx.fillText(label, margin.left + step * index + step / 2, rect.height - 12);
+      }
+      ctx.textAlign = 'left';
+    }
+
+    function simulatePreviewTick() {
+      if (state.feedMode !== 'preview' || !state.candles.length) return;
+      const now = Date.now();
+      const bucket = Math.floor(now / (state.interval * 1000)) * state.interval * 1000;
+      let candle = state.candles.at(-1);
+      if (candle.time < bucket) {
+        candle = { time: bucket, open: candle.close, high: candle.close, low: candle.close, close: candle.close };
+        state.candles.push(candle);
+        if (state.candles.length > 120) state.candles.shift();
+      }
+      const random = seededRandom(state.tickSeed + Math.floor(now / 1000));
+      const volatility = pairs[state.symbol].base * .000025 * Math.sqrt(state.interval / 60);
+      const price = Math.max(.00001, candle.close + (random() - .5) * volatility);
+      candle.close = price;
+      candle.high = Math.max(candle.high, price);
+      candle.low = Math.min(candle.low, price);
+      state.tickSeed += 1;
+      refreshAnalysis();
+    }
+
+    function updateTimer() {
+      const intervalMs = state.interval * 1000;
+      const remaining = Math.max(0, Math.ceil((Math.ceil(Date.now() / intervalMs) * intervalMs - Date.now()) / 1000));
+      const hours = Math.floor(remaining / 3600);
+      const minutes = Math.floor((remaining % 3600) / 60);
+      const seconds = remaining % 60;
+      document.getElementById('candleTimer').textContent = hours > 0
+        ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+        : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function updatePlanView() {
+      planToggle.textContent = state.premium ? 'VIEW: PREMIUM' : 'VIEW: FREE';
+      document.getElementById('figuresToggle').classList.toggle('locked', !state.premium);
+      document.getElementById('levelsToggle').classList.toggle('locked', !state.premium);
+      document.getElementById('emaToggle').classList.toggle('locked', !state.premium);
+      document.getElementById('bandsToggle').classList.toggle('locked', !state.premium);
+      drawChart();
+    }
+
+    function setFeedMode(mode) {
+      state.feedMode = mode;
+      const connected = mode === 'connected';
+      document.getElementById('dataPill').classList.toggle('connected', connected);
+      document.getElementById('dataStatus').textContent = connected ? 'CHART SCREEN V3 · QX DATA CONNECTED' : 'CHART SCREEN V3 · PREVIEW';
+      document.getElementById('chartSource').textContent = connected ? 'OWN CHART SCREEN V3 · QX DATA CONNECTED' : 'OWN CHART SCREEN V3 · PREVIEW DATA';
+    }
+
+    document.querySelectorAll('.market-card').forEach(card => card.addEventListener('click', () => {
+      document.querySelectorAll('.market-card').forEach(item => item.classList.remove('active'));
+      card.classList.add('active');
+      state.symbol = card.dataset.symbol;
+      document.getElementById('activePair').textContent = pairs[state.symbol].label;
+      setFeedMode('preview');
+      buildPreviewCandles();
+    }));
+
+    document.querySelectorAll('.time-button').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('.time-button').forEach(item => item.classList.remove('active'));
+      button.classList.add('active');
+      state.interval = Number(button.dataset.interval);
+      setFeedMode('preview');
+      buildPreviewCandles();
+      updateTimer();
+    }));
+
+    document.getElementById('figuresToggle').addEventListener('click', () => {
+      if (!state.premium) return showToast('Candle figures are a Premium feature.');
+      state.showFigures = !state.showFigures;
+      document.getElementById('figuresToggle').classList.toggle('active', state.showFigures);
+      drawChart();
+    });
+
+    document.getElementById('levelsToggle').addEventListener('click', () => {
+      if (!state.premium) return showToast('Support and Resistance are Premium features.');
+      state.showLevels = !state.showLevels;
+      document.getElementById('levelsToggle').classList.toggle('active', state.showLevels);
+      drawChart();
+    });
+
+    document.getElementById('emaToggle').addEventListener('click', () => {
+      if (!state.premium) return showToast('EMA overlays are a Premium feature.');
+      state.showEma = !state.showEma;
+      document.getElementById('emaToggle').classList.toggle('active', state.showEma);
+      drawChart();
+    });
+
+    document.getElementById('bandsToggle').addEventListener('click', () => {
+      if (!state.premium) return showToast('Bollinger Bands are a Premium feature.');
+      state.showBands = !state.showBands;
+      document.getElementById('bandsToggle').classList.toggle('active', state.showBands);
+      drawChart();
+    });
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = state.theme;
+      localStorage.setItem('ci-theme', state.theme);
+      document.getElementById('themeToggle').textContent = state.theme === 'dark' ? '☼' : '●';
+      drawChart();
+    });
+
+    planToggle.addEventListener('click', () => { state.premium = !state.premium; updatePlanView(); });
+
+    // Authorized live feed integration point. The backend can call these methods
+    // after it has received candles or quotes from the approved market-data source.
+    window.CandleIQFeed = {
+      setCandles({ symbol, interval, candles }) {
+        if (!pairs[symbol] || !Array.isArray(candles) || candles.length < 20) return false;
+        state.symbol = symbol;
+        state.interval = Number(interval) || 60;
+        state.candles = candles.map(item => ({
+          time: Number(item.time), open: Number(item.open), high: Number(item.high),
+          low: Number(item.low), close: Number(item.close)
+        })).filter(item => Object.values(item).every(Number.isFinite));
+        document.getElementById('activePair').textContent = pairs[state.symbol].label;
+        setFeedMode('connected');
+        refreshAnalysis();
+        return true;
+      },
+      pushQuote({ symbol, price, time = Date.now() }) {
+        if (symbol !== state.symbol || !Number.isFinite(Number(price)) || !state.candles.length) return false;
+        const bucket = Math.floor(Number(time) / (state.interval * 1000)) * state.interval * 1000;
+        let candle = state.candles.at(-1);
+        if (candle.time < bucket) {
+          candle = { time: bucket, open: candle.close, high: candle.close, low: candle.close, close: candle.close };
+          state.candles.push(candle);
+        }
+        candle.close = Number(price);
+        candle.high = Math.max(candle.high, candle.close);
+        candle.low = Math.min(candle.low, candle.close);
+        setFeedMode('connected');
+        refreshAnalysis();
+        return true;
+      }
+    };
+
+    function updateClock() {
+      document.getElementById('clock').textContent = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date());
+    }
+
+    root.dataset.theme = state.theme;
+    document.getElementById('themeToggle').textContent = state.theme === 'dark' ? '☼' : '●';
+    buildPreviewCandles();
+    updatePlanView();
+    updateTimer();
+    updateClock();
+    setInterval(updateClock, 1000);
+    setInterval(updateTimer, 250);
+    setInterval(simulatePreviewTick, 1000);
+    window.addEventListener('resize', drawChart);
+  </script>
+</body>
+</html>
