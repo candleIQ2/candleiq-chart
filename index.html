@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
-  <title>CandleIQ — Chart Screen V3</title>
+  <title>CandleIQ — Live QX Chart</title>
   <style>
     :root {
       --bg: #07090d;
@@ -118,6 +118,7 @@
     .icon-button { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; }
     .chip-button { height: 38px; border-radius: 10px; padding: 0 13px; font-size: 10px; font-weight: 850; letter-spacing: .06em; }
     .plan-preview { color: var(--amber); }
+    .reader-button { color: var(--green); text-decoration: none; display: inline-flex; align-items: center; }
     .profile { gap: 9px; padding-left: 10px; border-left: 1px solid var(--border); }
     .avatar { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); font-weight: 850; font-size: 12px; }
     .profile strong { display: block; font-size: 12px; }
@@ -179,7 +180,7 @@
     @media (max-width: 720px) {
       .topbar { height: 64px; padding: 0 13px; }
       .brand { min-width: auto; }
-      .brand-copy span, .profile div, .data-pill, .header-actions .chip-button:first-of-type { display: none; }
+      .brand-copy span, .profile div, .data-pill, .plan-preview { display: none; }
       .profile { padding-left: 4px; border-left: 0; }
       .page { padding: 13px 12px 24px; }
       .market-strip { grid-template-columns: repeat(7, 142px); }
@@ -204,9 +205,10 @@
       <div class="brand-copy"><strong>CandleIQ</strong><span>MARKET ANALYSIS</span></div>
     </div>
 
-    <div class="data-pill" id="dataPill"><span class="data-dot"></span><span id="dataStatus">CHART SCREEN V3 · PREVIEW</span></div>
+    <div class="data-pill" id="dataPill"><span class="data-dot"></span><span id="dataStatus">WAITING FOR QX READER</span></div>
 
     <div class="header-actions">
+      <a class="chip-button reader-button" href="reader.html" target="_blank" rel="noopener">CONNECT QX</a>
       <button class="chip-button plan-preview" id="planToggle" type="button">VIEW: PREMIUM</button>
       <button class="icon-button" id="themeToggle" type="button" aria-label="Toggle black and white theme">☼</button>
       <div class="profile"><div class="avatar">AK</div><div><strong>Ali Khan</strong><span id="clock">--:--:--</span></div></div>
@@ -244,7 +246,7 @@
           <canvas id="marketCanvas" aria-label="Custom live candle chart"></canvas>
           <div class="legend"><span class="legend-item"><i class="legend-swatch support"></i>SUPPORT ZONE</span><span class="legend-item"><i class="legend-swatch resistance"></i>RESISTANCE ZONE</span></div>
           <div class="timer-box"><span>NEXT CANDLE</span><strong id="candleTimer">00:00</strong></div>
-          <div class="chart-source" id="chartSource">OWN CHART SCREEN V3 · PREVIEW DATA</div>
+          <div class="chart-source" id="chartSource">PREVIEW DATA · OPEN QX READER TO CONNECT</div>
         </div>
       </article>
     </section>
@@ -273,6 +275,7 @@
       showEma: true,
       showBands: true,
       feedMode: 'preview',
+      feedLastAt: 0,
       candles: [],
       levels: null,
       tickSeed: 0
@@ -634,8 +637,8 @@
       state.feedMode = mode;
       const connected = mode === 'connected';
       document.getElementById('dataPill').classList.toggle('connected', connected);
-      document.getElementById('dataStatus').textContent = connected ? 'CHART SCREEN V3 · QX DATA CONNECTED' : 'CHART SCREEN V3 · PREVIEW';
-      document.getElementById('chartSource').textContent = connected ? 'OWN CHART SCREEN V3 · QX DATA CONNECTED' : 'OWN CHART SCREEN V3 · PREVIEW DATA';
+      document.getElementById('dataStatus').textContent = connected ? 'QX READER · LIVE' : 'WAITING FOR QX READER';
+      document.getElementById('chartSource').textContent = connected ? 'READ-ONLY QX SCREEN FEED · LIVE' : 'PREVIEW DATA · OPEN QX READER TO CONNECT';
     }
 
     document.querySelectorAll('.market-card').forEach(card => card.addEventListener('click', () => {
@@ -698,7 +701,7 @@
     // after it has received candles or quotes from the approved market-data source.
     window.CandleIQFeed = {
       setCandles({ symbol, interval, candles }) {
-        if (!pairs[symbol] || !Array.isArray(candles) || candles.length < 20) return false;
+        if (!pairs[symbol] || !Array.isArray(candles) || candles.length < 8) return false;
         state.symbol = symbol;
         state.interval = Number(interval) || 60;
         state.candles = candles.map(item => ({
@@ -706,6 +709,7 @@
           low: Number(item.low), close: Number(item.close)
         })).filter(item => Object.values(item).every(Number.isFinite));
         document.getElementById('activePair').textContent = pairs[state.symbol].label;
+        state.feedLastAt = Date.now();
         setFeedMode('connected');
         refreshAnalysis();
         return true;
@@ -721,11 +725,63 @@
         candle.close = Number(price);
         candle.high = Math.max(candle.high, candle.close);
         candle.low = Math.min(candle.low, candle.close);
+        state.feedLastAt = Date.now();
         setFeedMode('connected');
         refreshAnalysis();
         return true;
       }
     };
+
+    function acceptReaderPacket(packet) {
+      if (!packet || packet.type !== 'candleiq-candles') return false;
+      const accepted = window.CandleIQFeed.setCandles(packet);
+      if (accepted) {
+        document.querySelectorAll('.market-card').forEach(card => card.classList.toggle('active', card.dataset.symbol === packet.symbol));
+        document.querySelectorAll('.time-button').forEach(button => button.classList.toggle('active', Number(button.dataset.interval) === Number(packet.interval)));
+      }
+      return accepted;
+    }
+
+    let readerChannel = null;
+    if ('BroadcastChannel' in window) {
+      readerChannel = new BroadcastChannel('candleiq-qx-feed');
+      readerChannel.addEventListener('message', event => acceptReaderPacket(event.data));
+    }
+    window.addEventListener('storage', event => {
+      if (event.key !== 'ci-qx-last-packet' || !event.newValue) return;
+      try { acceptReaderPacket(JSON.parse(event.newValue)); } catch (error) { /* Ignore incomplete packets. */ }
+    });
+
+    try {
+      const savedPacket = JSON.parse(localStorage.getItem('ci-qx-last-packet') || 'null');
+      if (savedPacket && Date.now() - Number(savedPacket.detectedAt || 0) < 12000) acceptReaderPacket(savedPacket);
+    } catch (error) { /* First visit has no reader packet. */ }
+
+    let relaySocket = null;
+    function connectRemoteRelay(url) {
+      if (!String(url || '').startsWith('wss://')) return;
+      if (relaySocket) relaySocket.close();
+      try {
+        const separator = url.includes('?') ? '&' : '?';
+        relaySocket = new WebSocket(url + separator + 'role=viewer');
+        document.getElementById('dataStatus').textContent = 'REMOTE QX RELAY · CONNECTING';
+        relaySocket.addEventListener('open', () => {
+          if (state.feedMode !== 'connected') document.getElementById('dataStatus').textContent = 'REMOTE QX RELAY · WAITING';
+        });
+        relaySocket.addEventListener('message', event => {
+          try { acceptReaderPacket(JSON.parse(event.data)); } catch (error) { /* Ignore non-candle relay messages. */ }
+        });
+        relaySocket.addEventListener('close', () => {
+          if (state.feedMode !== 'connected') setFeedMode('preview');
+          setTimeout(() => connectRemoteRelay(url), 4000);
+        });
+      } catch (error) { setFeedMode('preview'); }
+    }
+
+    fetch('relay-config.json', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(config => { if (config && config.websocketUrl) connectRemoteRelay(config.websocketUrl); })
+      .catch(() => { /* Remote relay is optional during local reader testing. */ });
 
     function updateClock() {
       document.getElementById('clock').textContent = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date());
@@ -740,6 +796,12 @@
     setInterval(updateClock, 1000);
     setInterval(updateTimer, 250);
     setInterval(simulatePreviewTick, 1000);
+    setInterval(() => {
+      if (state.feedMode === 'connected' && Date.now() - state.feedLastAt > 12000) {
+        setFeedMode('preview');
+        buildPreviewCandles();
+      }
+    }, 2000);
     window.addEventListener('resize', drawChart);
   </script>
 </body>
