@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>CandleIQ — Chart Admin V3</title>
+  <style>
+    :root {
+      --bg: #07090d;
+      --sidebar: #0a0d12;
+      --panel: #0e131a;
+      --panel-2: #131a23;
+      --text: #f5f7fa;
+      --muted: #8b96a6;
+      --border: #202833;
+      --border-strong: #303b49;
+      --green: #20c997;
+      --green-soft: rgba(32, 201, 151, .12);
+      --red: #ff5d73;
+      --red-soft: rgba(255, 93, 115, .12);
+      --blue: #599cff;
+      --blue-soft: rgba(89, 156, 255, .12);
+      --amber: #f5b942;
+      --amber-soft: rgba(245, 185, 66, .12);
+      --shadow: 0 18px 45px rgba(0, 0, 0, .23);
+      --radius: 15px;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f3f5f7;
+      --sidebar: #ffffff;
+      --panel: #ffffff;
+      --panel-2: #f7f9fb;
+      --text: #111827;
+      --muted: #667286;
+      --border: #e1e6ec;
+      --border-strong: #cbd3dd;
+      --green-soft: rgba(22, 163, 116, .1);
+      --red-soft: rgba(225, 58, 78, .09);
+      --blue-soft: rgba(37, 99, 235, .09);
+      --amber-soft: rgba(217, 145, 21, .1);
+      --shadow: 0 18px 40px rgba(35, 45, 60, .08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      transition: background .2s ease, color .2s ease;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+
+    .app { min-height: 100vh; display: grid; grid-template-columns: 246px minmax(0, 1fr); }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      z-index: 40;
+    }
+
+    .brand, .brand-mark, .nav-button, .sidebar-user, .topbar, .top-actions,
+    .page-title, .metric-top, .trend, .card-head, .system-row, .pair-cell,
+    .status, .action-row, .setting-row, .switch-line, .modal-head {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand { gap: 11px; padding: 0 8px 22px; border-bottom: 1px solid var(--border); }
+    .brand-mark { width: 38px; height: 38px; justify-content: center; border-radius: 11px; background: var(--text); color: var(--bg); font-weight: 900; }
+    .brand strong { display: block; font-size: 15px; letter-spacing: -.02em; }
+    .brand span { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; letter-spacing: .14em; }
+
+    .nav-label { margin: 20px 10px 8px; color: var(--muted); font-size: 8px; font-weight: 850; letter-spacing: .16em; }
+    .nav { display: flex; flex-direction: column; gap: 5px; }
+    .nav-button {
+      width: 100%;
+      height: 42px;
+      gap: 11px;
+      padding: 0 11px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .nav-button:hover { background: var(--panel-2); color: var(--text); }
+    .nav-button.active { background: var(--text); color: var(--bg); }
+    .nav-icon { width: 22px; text-align: center; font-size: 14px; }
+    .nav-count { margin-left: auto; min-width: 22px; padding: 3px 6px; border-radius: 6px; background: var(--blue-soft); color: var(--blue); font-size: 8px; text-align: center; }
+    .nav-button.active .nav-count { background: color-mix(in srgb, var(--bg) 18%, transparent); color: var(--bg); }
+
+    .sidebar-foot { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border); }
+    .sidebar-user { gap: 10px; padding: 8px; }
+    .avatar { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: var(--blue-soft); color: var(--blue); font-size: 11px; font-weight: 900; }
+    .sidebar-user strong { display: block; font-size: 11px; }
+    .sidebar-user span { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+
+    .main { min-width: 0; }
+    .topbar {
+      height: 70px;
+      padding: 0 24px;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--bg) 91%, transparent);
+      backdrop-filter: blur(16px);
+    }
+    .menu-button { display: none !important; }
+    .page-title { gap: 11px; }
+    .page-title h1 { margin: 0; font-size: 17px; letter-spacing: -.03em; }
+    .page-title span { color: var(--muted); font-size: 10px; }
+    .top-actions { gap: 8px; }
+
+    .icon-button, .outline-button, .primary-button, .danger-button, .filter-button,
+    .small-button, .save-button {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--panel-2);
+      cursor: pointer;
+      font-weight: 800;
+      transition: transform .15s ease, border-color .15s ease;
+    }
+    .icon-button:hover, .outline-button:hover, .filter-button:hover, .small-button:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+    .icon-button { width: 38px; height: 38px; display: grid; place-items: center; }
+    .outline-button, .primary-button, .danger-button, .save-button { min-height: 38px; padding: 0 13px; font-size: 10px; }
+    .primary-button, .save-button { background: var(--text); border-color: var(--text); color: var(--bg); }
+    .danger-button { background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 35%, var(--border)); color: var(--red); }
+
+    .live-status { padding: 8px 11px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 9px; font-weight: 850; letter-spacing: .07em; }
+    .live-status::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
+
+    .content { width: min(1500px, 100%); margin: 0 auto; padding: 22px 24px 38px; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .welcome { margin-bottom: 18px; display: flex; align-items: flex-end; justify-content: space-between; gap: 15px; }
+    .welcome h2 { margin: 0; font-size: 22px; letter-spacing: -.04em; }
+    .welcome p { margin: 6px 0 0; color: var(--muted); font-size: 11px; }
+
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .metric-card { padding: 16px; }
+    .metric-top { justify-content: space-between; gap: 10px; }
+    .metric-top span { color: var(--muted); font-size: 9px; font-weight: 850; letter-spacing: .09em; }
+    .metric-icon { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 9px; background: var(--blue-soft); color: var(--blue); font-size: 13px; }
+    .metric-value { margin-top: 15px; font-size: 25px; font-weight: 850; letter-spacing: -.04em; }
+    .trend { margin-top: 7px; gap: 5px; color: var(--green); font-size: 9px; }
+    .trend.muted { color: var(--muted); }
+
+    .overview-grid { margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(290px, .75fr); gap: 14px; }
+    .card-head { min-height: 57px; padding: 0 16px; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+    .card-head h3 { margin: 0; font-size: 12px; }
+    .card-head span { color: var(--muted); font-size: 9px; }
+
+    .performance-body { padding: 16px; }
+    .chart-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 8px; }
+    .bar-chart { height: 190px; margin-top: 14px; display: grid; grid-template-columns: repeat(14, 1fr); gap: 8px; align-items: end; border-bottom: 1px solid var(--border); }
+    .bar { min-height: 10px; border-radius: 5px 5px 0 0; background: var(--green); opacity: .82; position: relative; }
+    .bar.low { background: var(--blue); }
+    .bar:hover { opacity: 1; }
+    .chart-foot { margin-top: 10px; display: flex; justify-content: space-between; color: var(--muted); font-size: 8px; }
+
+    .system-list { padding: 7px 15px; }
+    .system-row { min-height: 52px; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border); font-size: 10px; }
+    .system-row:last-child { border-bottom: 0; }
+    .system-row span { color: var(--muted); }
+    .status { gap: 6px; font-size: 8px; font-weight: 850; letter-spacing: .07em; }
+    .status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status.online { color: var(--green); }
+    .status.warning { color: var(--amber); }
+
+    .activity-card { margin-top: 14px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 13px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 10px; white-space: nowrap; }
+    th { color: var(--muted); font-size: 8px; letter-spacing: .09em; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .pair-cell { gap: 9px; }
+    .pair-badge { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--panel-2); color: var(--blue); font-size: 8px; font-weight: 900; }
+    .tag { display: inline-flex; padding: 5px 7px; border-radius: 7px; font-size: 8px; font-weight: 900; letter-spacing: .06em; }
+    .tag.green { color: var(--green); background: var(--green-soft); }
+    .tag.red { color: var(--red); background: var(--red-soft); }
+    .tag.blue { color: var(--blue); background: var(--blue-soft); }
+    .tag.amber { color: var(--amber); background: var(--amber-soft); }
+
+    .section-toolbar { margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .search-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .search-input, .select-input, .field input, .field select {
+      height: 39px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--panel);
+      color: var(--text);
+      outline: none;
+      padding: 0 11px;
+      font-size: 10px;
+    }
+    .search-input { width: min(290px, 70vw); }
+    .small-button { min-height: 31px; padding: 0 9px; font-size: 8px; }
+
+    .market-grid, .plan-grid, .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .market-admin-card { padding: 15px; }
+    .market-admin-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .market-admin-top strong { font-size: 13px; }
+    .market-admin-top span { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
+    .market-stats { margin-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .market-stat { padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-2); }
+    .market-stat span { display: block; color: var(--muted); font-size: 8px; }
+    .market-stat strong { display: block; margin-top: 5px; font-size: 11px; }
+
+    .toggle { width: 39px; height: 22px; padding: 2px; border: 0; border-radius: 999px; background: var(--border-strong); cursor: pointer; }
+    .toggle::after { content: ''; display: block; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .18s ease; }
+    .toggle.on { background: var(--green); }
+    .toggle.on::after { transform: translateX(17px); }
+
+    .plan-card { overflow: hidden; }
+    .plan-head { padding: 18px; border-bottom: 1px solid var(--border); }
+    .plan-head small { color: var(--muted); font-size: 8px; letter-spacing: .1em; }
+    .plan-head h3 { margin: 7px 0 0; font-size: 20px; }
+    .price { margin-top: 10px; font-size: 25px; font-weight: 850; }
+    .price span { color: var(--muted); font-size: 10px; font-weight: 500; }
+    .plan-body { padding: 15px 18px 18px; }
+    .switch-line { min-height: 40px; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); font-size: 10px; }
+    .switch-line:last-of-type { border-bottom: 0; }
+    .plan-actions { margin-top: 15px; display: flex; gap: 8px; }
+
+    .settings-card { padding: 17px; }
+    .settings-card h3 { margin: 0; font-size: 12px; }
+    .settings-card > p { margin: 6px 0 15px; color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .setting-row { min-height: 52px; justify-content: space-between; gap: 13px; border-top: 1px solid var(--border); }
+    .setting-row strong { display: block; font-size: 10px; }
+    .setting-row span { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
+    .field { margin-top: 12px; }
+    .field label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 8px; letter-spacing: .08em; }
+    .field input, .field select { width: 100%; }
+
+    .mobile-overlay { display: none; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      place-items: center;
+      padding: 18px;
+      background: rgba(0, 0, 0, .62);
+      backdrop-filter: blur(5px);
+    }
+    .modal.show { display: grid; }
+    .modal-card { width: min(460px, 100%); padding: 17px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); }
+    .modal-head { justify-content: space-between; gap: 12px; padding-bottom: 13px; border-bottom: 1px solid var(--border); }
+    .modal-head h3 { margin: 0; font-size: 13px; }
+    .modal-grid { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .action-row { margin-top: 16px; justify-content: flex-end; gap: 8px; }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 100;
+      max-width: min(360px, calc(100vw - 40px));
+      padding: 13px 15px;
+      border: 1px solid var(--border-strong);
+      border-radius: 11px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      font-size: 10px;
+      opacity: 0;
+      transform: translateY(18px);
+      transition: .2s ease;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1100px) {
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .overview-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 820px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: fixed; left: 0; transform: translateX(-105%); width: 246px; transition: transform .2s ease; box-shadow: var(--shadow); }
+      .sidebar.open { transform: translateX(0); }
+      .mobile-overlay { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0, 0, 0, .5); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+      .mobile-overlay.show { opacity: 1; pointer-events: auto; }
+      .menu-button { display: grid !important; }
+      .topbar { padding: 0 13px; }
+      .content { padding: 17px 13px 28px; }
+      .market-grid, .plan-grid, .settings-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .page-title span, .live-status { display: none; }
+      .metrics { grid-template-columns: 1fr; }
+      .welcome { align-items: flex-start; flex-direction: column; }
+      .modal-grid { grid-template-columns: 1fr; }
+      .market-stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">CI</div>
+        <div><strong>CandleIQ</strong><span>ADMIN CONTROL</span></div>
+      </div>
+
+      <div class="nav-label">MAIN</div>
+      <nav class="nav" aria-label="Main administration">
+        <button class="nav-button active" data-section="overview" type="button"><span class="nav-icon">⌂</span>Overview</button>
+        <button class="nav-button" data-section="users" type="button"><span class="nav-icon">◎</span>Users<span class="nav-count">248</span></button>
+        <button class="nav-button" data-section="markets" type="button"><span class="nav-icon">⌁</span>Currency Pairs</button>
+        <button class="nav-button" data-section="plans" type="button"><span class="nav-icon">◇</span>Plans</button>
+        <button class="nav-button" data-section="overlays" type="button"><span class="nav-icon">⌁</span>Chart Controls</button>
+      </nav>
+
+      <div class="nav-label">SYSTEM</div>
+      <nav class="nav" aria-label="System administration">
+        <button class="nav-button" data-section="settings" type="button"><span class="nav-icon">⚙</span>Settings</button>
+        <button class="nav-button" id="openUserPage" type="button"><span class="nav-icon">↗</span>User Website</button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="sidebar-user">
+          <div class="avatar">AD</div>
+          <div><strong>Admin User</strong><span>Super Administrator</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="page-title">
+          <button class="icon-button menu-button" id="menuButton" type="button">☰</button>
+          <div><h1 id="pageHeading">Overview</h1><span id="pageSubtitle">Platform performance and system health</span></div>
+        </div>
+        <div class="top-actions">
+          <div class="live-status">CHART ADMIN V3</div>
+          <button class="icon-button" id="themeToggle" type="button" aria-label="Toggle theme">☼</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="section active" id="overview">
+          <div class="welcome">
+            <div><h2>Good evening, Admin</h2><p>Here is what is happening with CandleIQ today.</p></div>
+            <button class="primary-button" data-section-jump="overlays" type="button">VIEW CHART CONTROLS</button>
+          </div>
+
+          <div class="metrics">
+            <article class="card metric-card"><div class="metric-top"><span>TOTAL USERS</span><div class="metric-icon">◎</div></div><div class="metric-value">248</div><div class="trend">↑ 12 new this week</div></article>
+            <article class="card metric-card"><div class="metric-top"><span>PREMIUM USERS</span><div class="metric-icon">◇</div></div><div class="metric-value">86</div><div class="trend">↑ 8.4% this month</div></article>
+            <article class="card metric-card"><div class="metric-top"><span>ACTIVE CHARTS</span><div class="metric-icon">⌁</div></div><div class="metric-value">183</div><div class="trend muted">7 normal currency pairs</div></article>
+            <article class="card metric-card"><div class="metric-top"><span>CHART OVERLAYS</span><div class="metric-icon">4</div></div><div class="metric-value">4</div><div class="trend muted">Figures · S/R · EMA · Bands</div></article>
+          </div>
+
+          <div class="overview-grid">
+            <article class="card">
+              <div class="card-head"><div><h3>Chart Viewers</h3><span>Last 14 sessions · preview data</span></div><span>ACTIVE USERS</span></div>
+              <div class="performance-body">
+                <div class="chart-labels"><span>100%</span><span>50%</span><span>0%</span></div>
+                <div class="bar-chart" role="img" aria-label="Chart viewers over fourteen sessions">
+                  <div class="bar" style="height:62%"></div><div class="bar low" style="height:35%"></div><div class="bar" style="height:71%"></div><div class="bar" style="height:59%"></div><div class="bar low" style="height:41%"></div><div class="bar" style="height:78%"></div><div class="bar" style="height:68%"></div><div class="bar low" style="height:32%"></div><div class="bar" style="height:73%"></div><div class="bar" style="height:64%"></div><div class="bar low" style="height:38%"></div><div class="bar" style="height:82%"></div><div class="bar" style="height:69%"></div><div class="bar" style="height:75%"></div>
+                </div>
+                <div class="chart-foot"><span>14 sessions ago</span><span>Today</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head"><div><h3>System Health</h3><span>Live service status</span></div><span>NOW</span></div>
+              <div class="system-list">
+                <div class="system-row"><span>Custom candle chart</span><strong class="status online">ONLINE</strong></div>
+                <div class="system-row"><span>QX market data adapter</span><strong class="status warning">WAITING</strong></div>
+                <div class="system-row"><span>Chart overlay engine</span><strong class="status online">READY</strong></div>
+                <div class="system-row"><span>User authentication</span><strong class="status online">ONLINE</strong></div>
+                <div class="system-row"><span>Payment verification</span><strong class="status warning">UI ONLY</strong></div>
+                <div class="system-row"><span>Last overlay update</span><strong>2 min ago</strong></div>
+              </div>
+            </article>
+          </div>
+
+          <article class="card activity-card">
+            <div class="card-head"><div><h3>Recent Activity</h3><span>Latest plan and account events</span></div><span>LIVE FEED</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th scope="col">USER</th><th scope="col">EVENT</th><th scope="col">PLAN</th><th scope="col">TIME</th><th scope="col">STATUS</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Ali Khan</strong><br><span style="color:var(--muted)">ali@example.com</span></td><td>Plan activated</td><td>Premium Monthly</td><td>2 min ago</td><td><span class="tag green">SUCCESS</span></td></tr>
+                  <tr><td><strong>Ahmed Raza</strong><br><span style="color:var(--muted)">ahmed@example.com</span></td><td>Account created</td><td>Free</td><td>11 min ago</td><td><span class="tag blue">NEW</span></td></tr>
+                  <tr><td><strong>Sara Malik</strong><br><span style="color:var(--muted)">sara@example.com</span></td><td>Plan expired</td><td>Premium Monthly</td><td>34 min ago</td><td><span class="tag red">EXPIRED</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="section" id="users">
+          <div class="section-toolbar">
+            <div class="search-row"><input class="search-input" id="userSearch" type="search" placeholder="Search name or email…"><select class="select-input" id="planFilter"><option value="all">All plans</option><option>Free</option><option>Premium</option></select></div>
+            <button class="primary-button" id="addUser" type="button">+ ADD USER</button>
+          </div>
+          <article class="card">
+            <div class="table-wrap">
+              <table id="usersTable">
+                <thead><tr><th scope="col">USER</th><th scope="col">PLAN</th><th scope="col">JOINED</th><th scope="col">LAST ACTIVE</th><th scope="col">STATUS</th><th scope="col">ACTION</th></tr></thead>
+                <tbody>
+                  <tr data-plan="Premium"><td><strong>Ali Khan</strong><br><span style="color:var(--muted)">ali@example.com</span></td><td><span class="tag amber">PREMIUM</span></td><td>14 Jul 2026</td><td>Online now</td><td><span class="tag green">ACTIVE</span></td><td><button class="small-button manage-user" type="button">MANAGE</button></td></tr>
+                  <tr data-plan="Free"><td><strong>Ahmed Raza</strong><br><span style="color:var(--muted)">ahmed@example.com</span></td><td><span class="tag blue">FREE</span></td><td>18 Jul 2026</td><td>10 min ago</td><td><span class="tag green">ACTIVE</span></td><td><button class="small-button manage-user" type="button">MANAGE</button></td></tr>
+                  <tr data-plan="Premium"><td><strong>Sara Malik</strong><br><span style="color:var(--muted)">sara@example.com</span></td><td><span class="tag amber">PREMIUM</span></td><td>02 Jul 2026</td><td>1 hour ago</td><td><span class="tag red">EXPIRED</span></td><td><button class="small-button manage-user" type="button">MANAGE</button></td></tr>
+                  <tr data-plan="Free"><td><strong>Usman Shah</strong><br><span style="color:var(--muted)">usman@example.com</span></td><td><span class="tag blue">FREE</span></td><td>10 Jul 2026</td><td>Yesterday</td><td><span class="tag green">ACTIVE</span></td><td><button class="small-button manage-user" type="button">MANAGE</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="section" id="markets">
+          <div class="section-toolbar"><div><strong>Normal Currency Pairs</strong><div style="margin-top:4px;color:var(--muted);font-size:9px">Enable or disable pairs shown on the user dashboard.</div></div><button class="primary-button save-trigger" type="button">SAVE PAIRS</button></div>
+          <div class="market-grid">
+            <article class="card market-admin-card"><div class="market-admin-top"><div><strong>EUR/USD</strong><span>Euro / US Dollar · QX data adapter</span></div><button class="toggle on" type="button" aria-label="Toggle EUR/USD"></button></div><div class="market-stats"><div class="market-stat"><span>TIMEFRAMES</span><strong>1m · 5m · 15m</strong></div><div class="market-stat"><span>VIEWS TODAY</span><strong>214</strong></div><div class="market-stat"><span>OVERLAYS</span><strong>4 ON</strong></div></div></article>
+            <article class="card market-admin-card"><div class="market-admin-top"><div><strong>GBP/USD</strong><span>Pound / US Dollar · QX data adapter</span></div><button class="toggle on" type="button" aria-label="Toggle GBP/USD"></button></div><div class="market-stats"><div class="market-stat"><span>TIMEFRAMES</span><strong>1m · 5m · 15m</strong></div><div class="market-stat"><span>VIEWS TODAY</span><strong>198</strong></div><div class="market-stat"><span>OVERLAYS</span><strong>4 ON</strong></div></div></article>
+            <article class="card market-admin-card"><div class="market-admin-top"><div><strong>USD/JPY</strong><span>US Dollar / Japanese Yen · QX data adapter</span></div><button class="toggle on" type="button" aria-label="Toggle USD/JPY"></button></div><div class="market-stats"><div class="market-stat"><span>TIMEFRAMES</span><strong>1m · 5m · 15m</strong></div><div class="market-stat"><span>VIEWS TODAY</span><strong>186</strong></div><div class="market-stat"><span>OVERLAYS</span><strong>4 ON</strong></div></div></article>
+            <article class="card market-admin-card"><div class="market-admin-top"><div><strong>AUD/USD</strong><span>Australian Dollar / US Dollar · QX data adapter</span></div><button class="toggle on" type="button" aria-label="Toggle AUD/USD"></button></div><div class="market-stats"><div class="market-stat"><span>TIMEFRAMES</span><strong>1m · 5m · 15m</strong></div><div class="market-stat"><span>VIEWS TODAY</span><strong>171</strong></div><div class="market-stat"><span>OVERLAYS</span><strong>4 ON</strong></div></div></article>
+            <article class="card market-admin-card"><div class="market-admin-top"><div><strong>USD/CAD</strong><span>US Dollar / Canadian Dollar · QX data adapter</span></div><button class="toggle on" type="button" aria-label="Toggle USD/CAD"></button></div><div class="market-stats"><div class="market-stat"><span>TIMEFRAMES</span><strong>1m · 5m · 15m</strong></div><div class="market-stat"><span>VIEWS TODAY</span><strong>160</strong></div><div class="market-stat"><span>OVERLAYS</span><strong>4 ON</strong></div></div></article>
+            <article class="card market-admin-card"><div class="market-admin-top"><div><strong>NZD/USD</strong><span>New Zealand Dollar / US Dollar · QX data adapter</span></div><button class="toggle" type="button" aria-label="Toggle NZD/USD"></button></div><div class="market-stats"><div class="market-stat"><span>TIMEFRAMES</span><strong>1m · 5m · 15m</strong></div><div class="market-stat"><span>VIEWS TODAY</span><strong>0</strong></div><div class="market-stat"><span>STATUS</span><strong>OFF</strong></div></div></article>
+          </div>
+        </section>
+
+        <section class="section" id="plans">
+          <div class="section-toolbar"><div><strong>Membership Plans</strong><div style="margin-top:4px;color:var(--muted);font-size:9px">Control what Free and Premium users can access.</div></div><button class="primary-button save-trigger" type="button">SAVE PLANS</button></div>
+          <div class="plan-grid">
+            <article class="card plan-card"><div class="plan-head"><small>STARTER ACCESS</small><h3>Free Plan</h3><div class="price">$0 <span>/ forever</span></div></div><div class="plan-body"><div class="switch-line"><span>Custom live candles</span><button class="toggle on" type="button"></button></div><div class="switch-line"><span>Candle close timer</span><button class="toggle on" type="button"></button></div><div class="switch-line"><span>Black / White theme</span><button class="toggle on" type="button"></button></div><div class="switch-line"><span>Candle figures</span><button class="toggle" type="button"></button></div><div class="switch-line"><span>Currency pair selection</span><button class="toggle on" type="button"></button></div><div class="plan-actions"><button class="outline-button save-trigger" type="button">UPDATE FREE PLAN</button></div></div></article>
+            <article class="card plan-card"><div class="plan-head"><small>FULL CHART ACCESS</small><h3>Premium Plan</h3><div class="price">$19 <span>/ month · sample</span></div></div><div class="plan-body"><div class="switch-line"><span>Candle figures G1–G9 / R1–R9</span><button class="toggle on" type="button"></button></div><div class="switch-line"><span>Support / Resistance zones</span><button class="toggle on" type="button"></button></div><div class="switch-line"><span>EMA 20 / EMA 50</span><button class="toggle on" type="button"></button></div><div class="switch-line"><span>Bollinger Bands</span><button class="toggle on" type="button"></button></div><div class="switch-line"><span>All chart timeframes</span><button class="toggle on" type="button"></button></div><div class="plan-actions"><button class="primary-button save-trigger" type="button">UPDATE PREMIUM PLAN</button></div></div></article>
+          </div>
+        </section>
+
+        <section class="section" id="overlays">
+          <div class="section-toolbar"><div class="search-row"><select class="select-input"><option>Today</option><option>Last 7 days</option><option>Last 30 days</option></select><select class="select-input"><option>All pairs</option><option>EUR/USD</option><option>GBP/USD</option><option>USD/JPY</option></select></div><button class="outline-button" id="exportReport" type="button">EXPORT REPORT</button></div>
+          <article class="card">
+            <div class="card-head"><div><h3>Premium Chart Overlays</h3><span>Control what is drawn on each custom chart</span></div><span>4 OVERLAYS</span></div>
+            <div class="table-wrap"><table><thead><tr><th scope="col">PAIR</th><th scope="col">TIMEFRAMES</th><th scope="col">G/R FIGURES</th><th scope="col">S/R ZONES</th><th scope="col">EMA 20/50</th><th scope="col">BOLLINGER</th><th scope="col">STATUS</th></tr></thead><tbody><tr><td><div class="pair-cell"><div class="pair-badge">QX</div><strong>EUR/USD</strong></div></td><td>1m · 5m · 15m</td><td>ON</td><td>ON</td><td>ON</td><td>ON</td><td><span class="tag green">ACTIVE</span></td></tr><tr><td><div class="pair-cell"><div class="pair-badge">QX</div><strong>GBP/USD</strong></div></td><td>1m · 5m · 15m</td><td>ON</td><td>ON</td><td>ON</td><td>ON</td><td><span class="tag green">ACTIVE</span></td></tr><tr><td><div class="pair-cell"><div class="pair-badge">QX</div><strong>USD/JPY</strong></div></td><td>1m · 5m · 15m</td><td>ON</td><td>ON</td><td>ON</td><td>ON</td><td><span class="tag green">ACTIVE</span></td></tr><tr><td><div class="pair-cell"><div class="pair-badge">QX</div><strong>NZD/USD</strong></div></td><td>—</td><td>OFF</td><td>OFF</td><td>OFF</td><td>OFF</td><td><span class="tag red">DISABLED</span></td></tr></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="section" id="settings">
+          <div class="settings-grid">
+            <article class="card settings-card"><h3>Chart Overlay Engine</h3><p>Controls for figures, levels and indicators drawn on the custom chart.</p><div class="field"><label>MAXIMUM CANDLE FIGURE</label><input type="number" value="9" min="5" max="9" /></div><div class="field"><label>DEFAULT TIMEFRAME</label><select><option>1 minute</option><option>5 minutes</option><option>15 minutes</option></select></div><div class="setting-row"><div><strong>Lock figures after close</strong><span>Do not change numbering after candle close.</span></div><button class="toggle on" type="button"></button></div><div class="setting-row"><div><strong>Auto-update S/R zones</strong><span>Recalculate zones after each closed candle.</span></div><button class="toggle on" type="button"></button></div></article>
+            <article class="card settings-card"><h3>Website Settings</h3><p>General controls for the user dashboard.</p><div class="field"><label>WEBSITE NAME</label><input value="CandleIQ" /></div><div class="field"><label>DEFAULT THEME</label><select><option>Black</option><option>White</option></select></div><div class="setting-row"><div><strong>Candle timer</strong><span>Show the current candle close countdown.</span></div><button class="toggle on" type="button"></button></div><div class="setting-row"><div><strong>Maintenance mode</strong><span>Temporarily block user access.</span></div><button class="toggle" type="button"></button></div></article>
+          </div>
+          <div style="margin-top:14px"><button class="save-button save-trigger" type="button">SAVE ALL SETTINGS</button></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal" id="userModal">
+    <div class="modal-card">
+      <div class="modal-head"><h3>Manage User</h3><button class="icon-button" id="closeModal" type="button">×</button></div>
+      <div class="modal-grid"><div class="field"><label>USER NAME</label><input type="text" value="Ali Khan"></div><div class="field"><label>PLAN</label><select><option>Premium</option><option>Free</option></select></div><div class="field"><label>PLAN EXPIRY</label><input type="date" value="2026-08-19"></div><div class="field"><label>ACCOUNT STATUS</label><select><option>Active</option><option>Blocked</option></select></div></div>
+      <div class="action-row"><button class="danger-button" type="button">BLOCK USER</button><button class="primary-button" id="saveUser" type="button">SAVE USER</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const pageInfo = {
+      overview: ['Overview', 'Platform performance and system health'],
+      users: ['Users', 'Manage Free and Premium accounts'],
+      markets: ['Currency Pairs', 'Normal market pairs and chart availability'],
+      plans: ['Plans', 'Free and Premium feature access'],
+      overlays: ['Chart Controls', 'Candle figures, levels and indicator overlays'],
+      settings: ['Settings', 'Analysis engine and website controls']
+    };
+
+    const root = document.documentElement;
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    const toast = document.getElementById('toast');
+    const modal = document.getElementById('userModal');
+    let theme = localStorage.getItem('ci-admin-theme') || 'dark';
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function closeMenu() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+    }
+
+    function openSection(name) {
+      document.querySelectorAll('.section').forEach(section => section.classList.toggle('active', section.id === name));
+      document.querySelectorAll('.nav-button[data-section]').forEach(button => button.classList.toggle('active', button.dataset.section === name));
+      document.getElementById('pageHeading').textContent = pageInfo[name][0];
+      document.getElementById('pageSubtitle').textContent = pageInfo[name][1];
+      closeMenu();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.querySelectorAll('[data-section]').forEach(button => button.addEventListener('click', () => openSection(button.dataset.section)));
+    document.querySelectorAll('[data-section-jump]').forEach(button => button.addEventListener('click', () => openSection(button.dataset.sectionJump)));
+
+    document.getElementById('menuButton').addEventListener('click', () => {
+      sidebar.classList.add('open');
+      overlay.classList.add('show');
+    });
+    overlay.addEventListener('click', closeMenu);
+
+    function applyTheme() {
+      root.dataset.theme = theme;
+      localStorage.setItem('ci-admin-theme', theme);
+      document.getElementById('themeToggle').textContent = theme === 'dark' ? '☼' : '●';
+    }
+    document.getElementById('themeToggle').addEventListener('click', () => { theme = theme === 'dark' ? 'light' : 'dark'; applyTheme(); });
+
+    document.querySelectorAll('.toggle').forEach(toggle => toggle.addEventListener('click', () => toggle.classList.toggle('on')));
+    document.querySelectorAll('.save-trigger').forEach(button => button.addEventListener('click', () => showToast('UI settings saved for this preview. Backend connection will be added later.')));
+    document.getElementById('exportReport').addEventListener('click', () => showToast('Chart overlay report will be available after the database is connected.'));
+    document.getElementById('openUserPage').addEventListener('click', () => window.open('user-chart-screen-v3.html', '_blank', 'noopener'));
+
+    document.querySelectorAll('.manage-user').forEach(button => button.addEventListener('click', () => modal.classList.add('show')));
+    document.getElementById('addUser').addEventListener('click', () => modal.classList.add('show'));
+    document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('show'));
+    modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('show'); });
+    document.getElementById('saveUser').addEventListener('click', () => { modal.classList.remove('show'); showToast('User changes saved in UI preview.'); });
+
+    function filterUsers() {
+      const query = document.getElementById('userSearch').value.toLowerCase().trim();
+      const plan = document.getElementById('planFilter').value;
+      document.querySelectorAll('#usersTable tbody tr').forEach(row => {
+        const matchText = row.textContent.toLowerCase().includes(query);
+        const matchPlan = plan === 'all' || row.dataset.plan === plan;
+        row.style.display = matchText && matchPlan ? '' : 'none';
+      });
+    }
+    document.getElementById('userSearch').addEventListener('input', filterUsers);
+    document.getElementById('planFilter').addEventListener('change', filterUsers);
+
+    root.dataset.theme = theme;
+    applyTheme();
+  </script>
+</body>
+</html>
