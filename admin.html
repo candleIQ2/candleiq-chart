@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
-  <title>CandleIQ — Chart Admin V3</title>
+  <title>CandleIQ — Chart Admin</title>
   <style>
     :root {
       --bg: #07090d;
@@ -335,6 +335,7 @@
       <div class="nav-label">SYSTEM</div>
       <nav class="nav" aria-label="System administration">
         <button class="nav-button" data-section="settings" type="button"><span class="nav-icon">⚙</span>Settings</button>
+        <button class="nav-button" id="openReaderPage" type="button"><span class="nav-icon">◉</span>QX Screen Reader</button>
         <button class="nav-button" id="openUserPage" type="button"><span class="nav-icon">↗</span>User Website</button>
       </nav>
 
@@ -355,7 +356,7 @@
           <div><h1 id="pageHeading">Overview</h1><span id="pageSubtitle">Platform performance and system health</span></div>
         </div>
         <div class="top-actions">
-          <div class="live-status">CHART ADMIN V3</div>
+          <div class="live-status">QX READER READY</div>
           <button class="icon-button" id="themeToggle" type="button" aria-label="Toggle theme">☼</button>
         </div>
       </header>
@@ -540,7 +541,8 @@
     document.querySelectorAll('.toggle').forEach(toggle => toggle.addEventListener('click', () => toggle.classList.toggle('on')));
     document.querySelectorAll('.save-trigger').forEach(button => button.addEventListener('click', () => showToast('UI settings saved for this preview. Backend connection will be added later.')));
     document.getElementById('exportReport').addEventListener('click', () => showToast('Chart overlay report will be available after the database is connected.'));
-    document.getElementById('openUserPage').addEventListener('click', () => window.open('user-chart-screen-v3.html', '_blank', 'noopener'));
+    document.getElementById('openReaderPage').addEventListener('click', () => window.open('reader.html', '_blank', 'noopener'));
+    document.getElementById('openUserPage').addEventListener('click', () => window.open('index.html', '_blank', 'noopener'));
 
     document.querySelectorAll('.manage-user').forEach(button => button.addEventListener('click', () => modal.classList.add('show')));
     document.getElementById('addUser').addEventListener('click', () => modal.classList.add('show'));
